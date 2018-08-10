@@ -12,6 +12,7 @@ var conf_file = flag.String("conf", "config.toml", "config file path")
 
 func init()  {
 	flag.Set("log_dir", "/Users/fengchen/go/src/hvdc/hvdc/logs")
+
 }
 
 type HdvcServer struct {

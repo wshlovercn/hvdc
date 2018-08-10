@@ -4,6 +4,7 @@ import (
 	"net"
 	"github.com/golang/glog"
 	"fmt"
+	"github.com/orcaman/concurrent-map"
 )
 
 type RtuConfig struct {
@@ -14,8 +15,10 @@ type Function func(rtuServer *RtuServer, c *RtuConn, f *RTUFrame) (data []byte, 
 
 type RtuServer struct {
 	config *RtuConfig
-	
+
 	listener net.Listener
+	conns cmap.ConcurrentMap
+
 	functions [256]Function
 }
 
@@ -29,6 +32,7 @@ func NewRtuServer(config *RtuConfig) *RtuServer {
 	rtuServer := &RtuServer{
 		config:config,
 		listener:l,
+		conns:cmap.New(),
 	}
 
 	rtuServer.functions[F_REGISTER] = Register
@@ -66,10 +70,18 @@ func (rtuServer *RtuServer) Stop() {
 
 func (rtuServer *RtuServer) OnConnected(c *RtuConn)  {
 	glog.Infof("%s OnConnected", c.String())
+
+	//并不需要做什么
 }
 
 func (rtuServer *RtuServer) OnDisconnected(c *RtuConn, err error) {
 	glog.Infof("%s OnDisconnected, %v", c.String(), err)
+
+	if c.IsRegistered() {
+		rtuServer.conns.Remove(c.Key())
+
+		//TODO:业务处理
+	}
 }
 
 func (rtuServer *RtuServer) OnRtuFrame(c *RtuConn, f *RTUFrame) error  {
@@ -79,6 +91,10 @@ func (rtuServer *RtuServer) OnRtuFrame(c *RtuConn, f *RTUFrame) error  {
 	response := f.Copy()
 
 	f_code := f.GetFunction()
+	if !c.IsRegistered() && f_code != F_REGISTER {
+		return fmt.Errorf("receive data while unregitered")
+	}
+
 	if rtuServer.functions[f_code] != nil {
 		data, exception = rtuServer.functions[f_code](rtuServer, c, f)
 		response.SetData(data)
@@ -95,10 +111,18 @@ func (rtuServer *RtuServer) OnRtuFrame(c *RtuConn, f *RTUFrame) error  {
 	return nil
 }
 
+
 func (rtuServer *RtuServer) Register(c *RtuConn, area uint16, deviceId uint8, deviceName []byte, remark []byte)  {
-	
+	glog.Infof("%s register [%v-%v-%s]", c.String(), area, deviceId, string(deviceName))
+
+	c.Register(area, deviceId, deviceName, remark)
+	rtuServer.conns.Set(c.Key(), c)
+
+	//TODO:业务处理
 }
 
 func (RtuServer *RtuServer) HeartBeat(c *RtuConn, area uint16, deviceId uint8) {
+	glog.Infof("%s HeartBeat [%v-%v]", c.String(), area, deviceId)
 
+	//TODO:业务处理
 }

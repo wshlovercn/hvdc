@@ -25,6 +25,12 @@ type RtuConn struct {
 
 	err      atomic.Value
 	running  utils.AtomicBoolean
+
+	registerd  utils.AtomicBoolean
+	area       uint16
+	deviceId   uint8
+	deviceName []byte
+	remark     []byte
 }
 
 func NewRtuConn(conn net.Conn, callback RtuConnCallback) *RtuConn {
@@ -58,6 +64,34 @@ func (c *RtuConn) SetErr(err error)  {
 func (c *RtuConn) GetErr() error {
 	err := c.err.Load()
 	return err.(error)
+}
+
+func (c *RtuConn) IsRegistered() bool {
+	return c.registerd.Get()
+}
+
+func (c *RtuConn) SetRegistered() {
+	c.registerd.Set(true)
+}
+
+func (c *RtuConn) Register(area uint16, deviceId uint8, deviceName []byte, remark []byte) {
+	if c.IsRegistered() {
+		return
+	}
+
+	c.SetRegistered()
+	c.area = area
+	c.deviceId = deviceId
+	c.deviceName = deviceName
+	c.remark = remark
+}
+
+func (c *RtuConn) Key() string {
+	if c.IsRegistered() {
+		return fmt.Sprintf("%v-%v", c.area, c.deviceId)
+	} else {
+		return ""
+	}
 }
 
 func (c *RtuConn) Start()  {
@@ -144,6 +178,6 @@ func (c *RtuConn) writeLoop() {
 }
 
 func (c *RtuConn) String() string {
-	s := fmt.Sprintf("RtuConn{%s}", c.conn.RemoteAddr().String())
+	s := fmt.Sprintf("RtuConn{key:%s, addr:%s}", c.Key(), c.conn.RemoteAddr().String())
 	return s
 }
