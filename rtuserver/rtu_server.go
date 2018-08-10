@@ -56,11 +56,11 @@ func (rtuServer *RtuServer) Stop() {
  */
 
 func (rtuServer *RtuServer) OnConnected(c *RtuConn)  {
-
+	glog.Infof("%s OnConnected", c.String())
 }
 
 func (rtuServer *RtuServer) OnDisconnected(c *RtuConn, err error) {
-
+	glog.Infof("%s OnDisconnected, %v", c.String(), err)
 }
 
 func (rtuServer *RtuServer) OnRtuFrame(c *RtuConn, f *RTUFrame) error  {

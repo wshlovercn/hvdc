@@ -13,6 +13,12 @@
 			"path": "github.com/golang/glog",
 			"revision": "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
 			"revisionTime": "2016-01-25T20:49:56Z"
+		},
+		{
+			"checksumSHA1": "K8QsnZLV9n7jHaNr9jySy1P96LY=",
+			"path": "github.com/orcaman/concurrent-map",
+			"revision": "b28018939af9022337862b94a463abb18abb3e0e",
+			"revisionTime": "2018-07-23T18:39:37Z"
 		}
 	],
 	"rootPath": "hvdc"

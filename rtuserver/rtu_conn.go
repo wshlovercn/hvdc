@@ -1,11 +1,12 @@
 package rtuserver
 
 import (
-	"io"
 	"github.com/golang/glog"
 	"sync"
 	"sync/atomic"
 	"hvdc/baselib/utils"
+	"net"
+	"fmt"
 )
 
 type RtuConnCallback interface {
@@ -15,7 +16,7 @@ type RtuConnCallback interface {
 }
 
 type RtuConn struct {
-	conn     io.ReadWriteCloser
+	conn     net.Conn
 	callback RtuConnCallback
 
 	once     sync.Once
@@ -26,7 +27,7 @@ type RtuConn struct {
 	running  utils.AtomicBoolean
 }
 
-func NewRtuConn(conn io.ReadWriteCloser, callback RtuConnCallback) *RtuConn {
+func NewRtuConn(conn net.Conn, callback RtuConnCallback) *RtuConn {
 	rtuConn := &RtuConn{
 		conn:conn,
 		callback:callback,
@@ -49,7 +50,9 @@ func (c *RtuConn) SetRunning(r bool)  {
 }
 
 func (c *RtuConn) SetErr(err error)  {
-	c.err.Store(err)
+	if err != nil {
+		c.err.Store(err)
+	}
 }
 
 func (c *RtuConn) GetErr() error {
@@ -65,7 +68,20 @@ func (c *RtuConn) Start()  {
 }
 
 func (c *RtuConn) Read() (*RTUFrame, error) {
-	return nil, nil
+	packet := make([]byte, 512)
+	bytesRead, err := c.conn.Read(packet)
+	if err != nil {
+		glog.Errorf("read error %v", err)
+		return nil, err
+	}
+	packet = packet[:bytesRead]
+
+	frame, err := NewRTUFrame(packet)
+	if err != nil {
+		glog.Errorf("bad packet error %v", err)
+		return nil, err
+	}
+	return frame, nil
 }
 
 func (c *RtuConn) Write(f *RTUFrame)  {
@@ -128,5 +144,6 @@ func (c *RtuConn) writeLoop() {
 }
 
 func (c *RtuConn) String() string {
-	return ""
+	s := fmt.Sprintf("RtuConn{%s}", c.conn.RemoteAddr().String())
+	return s
 }
