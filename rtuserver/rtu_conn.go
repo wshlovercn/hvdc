@@ -7,6 +7,7 @@ import (
 	"hvdc/baselib/utils"
 	"net"
 	"fmt"
+	"time"
 )
 
 type RtuConnCallback interface {
@@ -25,6 +26,7 @@ type RtuConn struct {
 
 	err      atomic.Value
 	running  utils.AtomicBoolean
+	timeout  time.Duration
 
 	registerd  utils.AtomicBoolean
 	area       uint16
@@ -40,6 +42,7 @@ func NewRtuConn(conn net.Conn, callback RtuConnCallback) *RtuConn {
 
 		closeCh:make(chan struct{}, 0),
 		writeCh:make(chan *RTUFrame, 1),
+		timeout:5,
 	}
 	rtuConn.SetRunning(false)
 	rtuConn.SetErr(nil)
@@ -103,6 +106,8 @@ func (c *RtuConn) Start()  {
 
 func (c *RtuConn) Read() (*RTUFrame, error) {
 	packet := make([]byte, 512)
+
+	c.conn.SetReadDeadline(time.Now().Add(4 * c.timeout * time.Second))
 	bytesRead, err := c.conn.Read(packet)
 	if err != nil {
 		glog.Errorf("read error %v", err)
@@ -150,7 +155,7 @@ func (c *RtuConn) readLoop()  {
 				return
 			} else {
 				if err := c.callback.OnRtuFrame(c, f); err != nil {
-					glog.Errorf("%s OnRtuFrame error %v", err)
+					glog.Errorf("%s OnRtuFrame error %v", c.String(), err)
 					c.SetErr(err)
 					return
 				}
