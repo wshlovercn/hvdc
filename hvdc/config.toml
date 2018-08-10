@@ -1,0 +1,2 @@
+[RtuConf]
+    Addr="0.0.0.0:502"  #TCP RTU 监听地址
